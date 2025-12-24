@@ -1,13 +1,15 @@
 describe('Конструктор бургера', () => {
-  const visitConstructor = () => {
+  const visitConstructor = ({ withAuth = false } = {}) => {
     cy.intercept('GET', '**/ingredients', { fixture: 'ingredients.json' }).as(
       'getIngredients'
     );
     cy.intercept('GET', '**/auth/user', { fixture: 'user.json' }).as('getUser');
     cy.visit('/', {
       onBeforeLoad(win) {
-        win.localStorage.setItem('refreshToken', 'test-refresh');
-        win.document.cookie = 'accessToken=test-access;';
+        if (withAuth) {
+          win.localStorage.setItem('refreshToken', 'test-refresh');
+          win.document.cookie = 'accessToken=test-access;';
+        }
       }
     });
 
@@ -42,20 +44,29 @@ describe('Конструктор бургера', () => {
     cy.contains('Детали ингредиента').should('not.exist');
   });
 
-  it('оформляет заказ и очищает конструктор', () => {
-    visitConstructor();
-    cy.intercept('POST', '**/orders', { fixture: 'order.json' }).as('createOrder');
-    cy.contains('li', 'Булка 1').within(() => {
-      cy.contains('button', 'Добавить').click();
+  describe('Оформление заказа', () => {
+    afterEach(() => {
+      cy.clearLocalStorage();
+      cy.clearCookie('accessToken');
     });
-    cy.contains('li', 'Котлета флюоресцентная').within(() => {
-      cy.contains('button', 'Добавить').click();
+
+    it('оформляет заказ и очищает конструктор', () => {
+      visitConstructor({ withAuth: true });
+      cy.intercept('POST', '**/orders', { fixture: 'order.json' }).as(
+        'createOrder'
+      );
+      cy.contains('li', 'Булка 1').within(() => {
+        cy.contains('button', 'Добавить').click();
+      });
+      cy.contains('li', 'Котлета флюоресцентная').within(() => {
+        cy.contains('button', 'Добавить').click();
+      });
+      cy.contains('button', 'Оформить заказ').click();
+      cy.wait('@createOrder');
+      cy.contains('9999').should('exist');
+      cy.get('#modals button').click();
+      cy.contains('9999').should('not.exist');
+      cy.get('[class*="constructor-element"]').should('not.exist');
     });
-    cy.contains('button', 'Оформить заказ').click();
-    cy.wait('@createOrder');
-    cy.contains('9999').should('exist');
-    cy.get('#modals button').click();
-    cy.contains('9999').should('not.exist');
-    cy.get('[class*="constructor-element"]').should('not.exist');
   });
 });
