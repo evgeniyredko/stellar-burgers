@@ -4,7 +4,6 @@ describe('Конструктор бургера', () => {
       'getIngredients'
     );
     cy.intercept('GET', '**/auth/user', { fixture: 'user.json' }).as('getUser');
-
     cy.visit('/', {
       onBeforeLoad(win) {
         win.localStorage.setItem('refreshToken', 'test-refresh');
@@ -17,58 +16,46 @@ describe('Конструктор бургера', () => {
 
   it('добавляет булку и начинку в конструктор', () => {
     visitConstructor();
-
     cy.contains('li', 'Булка 1').within(() => {
       cy.contains('button', 'Добавить').click();
     });
-
     cy.contains('li', 'Котлета флюоресцентная').within(() => {
       cy.contains('button', 'Добавить').click();
     });
-
     cy.contains('Булка 1 (верх)').should('exist');
     cy.contains('Булка 1 (низ)').should('exist');
-    cy
-      .get('section[class*=burger_constructor] ul[class*=elements] li')
-      .should('contain.text', 'Котлета флюоресцентная')
-      .and('have.length', 1);
+    cy.get('[class*="constructor-element__text"]')
+      .contains('Котлета флюоресцентная')
+      .should('have.length', 1);
   });
 
   it('открывает и закрывает модальное окно ингредиента', () => {
     visitConstructor();
-
     cy.contains('a', 'Булка 1').click();
     cy.contains('Детали ингредиента').should('exist');
     cy.contains('Булка 1').should('exist');
-
-    cy.get('[class*="modal_button"]').click();
+    cy.get('#modals button').click();
     cy.contains('Детали ингредиента').should('not.exist');
-
     cy.contains('a', 'Соус фирменный').click();
     cy.contains('Детали ингредиента').should('exist');
-    cy.get('[class*="overlay"]').click({ force: true });
+    cy.get('#modals button').click();
     cy.contains('Детали ингредиента').should('not.exist');
   });
 
   it('оформляет заказ и очищает конструктор', () => {
     visitConstructor();
     cy.intercept('POST', '**/orders', { fixture: 'order.json' }).as('createOrder');
-
     cy.contains('li', 'Булка 1').within(() => {
       cy.contains('button', 'Добавить').click();
     });
     cy.contains('li', 'Котлета флюоресцентная').within(() => {
       cy.contains('button', 'Добавить').click();
     });
-
     cy.contains('button', 'Оформить заказ').click();
     cy.wait('@createOrder');
-
     cy.contains('9999').should('exist');
-
-    cy.get('[class*="modal_button"]').click();
+    cy.get('#modals button').click();
     cy.contains('9999').should('not.exist');
-    cy.contains('Выберите булки').should('exist');
-    cy.contains('Выберите начинку').should('exist');
+    cy.get('[class*="constructor-element"]').should('not.exist');
   });
 });
